@@ -1,7 +1,8 @@
 import random
 from datetime import date, datetime, timedelta
-from .config import hashs
+from config import hashs
 import hashlib
+import pickle
 
 def get_hash(nums, keys, mod):
     num_sum = 0
@@ -23,8 +24,9 @@ def get_account_num():
     return base
 
 def get_pin_num():
-    base = ''
-    nums = [random.randint(1, 9)]
+    first_num = random.randint(1, 9)
+    base = str(first_num)
+    nums = [first_num]
     for i in range(11):
         num = random.randint(0, 9)
         nums.append(num)
@@ -100,18 +102,38 @@ class Card:
     def set_pin(self, value):
         self.__PIN = value
 
-    def pin_check(self, value):
-        if value == self.__PIN:
+    def pin_check(self):
+        nums = []
+        for i, char in enumerate(self.__PIN):
+            if i == 12:
+                num1 = int(char)
+            elif i == 13:
+                num2 = int(char)
+                break
+            nums.append(int(char))
+        if num1 == get_hash(nums, hashs['card'][0], 10) and num2== get_hash(nums, hashs['card'][1], 10):
+            return True
+        print("Invalid PIN number!")
+        return False
+
+    def pin_equal(self, value):
+        if self.__PIN == value:
             return True
         else:
             return False
-
+            
 def make_account_with_card(password, money):
     account = Account(get_account_num(), password, money = money)
     card = Card()
     card.set_pin(get_pin_num())
     #account.card = card
     card.account = account
+    with open('cards/num_card.txt', 'r') as f:
+        len_cards = int(f.read())
+    with open('cards/num_card.txt', 'w') as f2:
+        f2.write(str(len_cards + 1))
+    with open('cards/card_{}.bin'.format(len_cards), 'wb') as f3:
+        pickle.dump(card, f3)
 
 def verify_account(account):
     accountnum = account.accountnum
@@ -122,12 +144,16 @@ def verify_account(account):
         if int(accountnum[10]) == get_hash(nums, hashs['account'][0], 10) and int(accountnum[11]) == get_hash(nums, hashs['account'][1], 10) and int(accountnum[12]) == get_hash(nums, hashs['account'][2], 10):
             return True
         else:
-            "Invalid account number!"
+            print("Invalid account number!")
             return False
     else:
-        "Invalid account number!"
+        print("Invalid account number!")
         return False
+
 if __name__ == '__main__':
-    card = Card()
-    card.set_pin('111')
-    print(card.pin_check('111'))
+    with open('cards/card_{}.bin'.format(0), 'rb') as f3:
+        car = pickle.load(f3)
+    print(car.account.accountnum)
+    print(verify_account(car.account))
+    print(car.pin_check())
+    #make_account_with_card(1234, 1000)
