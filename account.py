@@ -45,7 +45,7 @@ class Account:
         #self.card = None
         self.__balance = 0
         self.history = []
-        self.__password = None
+        self.set_password(password)
         self.init_deposit(money)
 
     def init_deposit(self, value):
@@ -55,11 +55,11 @@ class Account:
         print("[Init] Time : {}, Change : {}, Balance : {}".format(now, value, self.__balance))
 
     def set_password(self, password):
-        encoded = str(password).encode()
-        self.__password = hashlib.sha256(encoded).hexdigest()
+        #encoded = str(password).encode()
+        self.__password = password
 
     def verify_password(self, password):
-        if self.__password == hashlib.sha256(str(password).encode()).hexdigest():
+        if self.__password == password:
             return True
         else:
             print('Wrong password!')
@@ -89,6 +89,7 @@ class Account:
                 print("[Withdraw] Time : {}, Change : {}, Balance : {}".format(now, -value, self.__balance))
                 return True
             else:
+                print("Wrong password!")
                 return False
         else:
             print('Not enough money.')
@@ -122,18 +123,43 @@ class Card:
         else:
             return False
             
+    def get_hashed_pin(self):
+        return hashlib.sha256(str(self.__PIN).encode()).hexdigest()
+
 def make_account_with_card(password, money):
-    account = Account(get_account_num(), password, money = money)
-    card = Card()
-    card.set_pin(get_pin_num())
-    #account.card = card
-    card.account = account
     with open('cards/num_card.txt', 'r') as f:
         len_cards = int(f.read())
+        f.close()
+    accountlist = []
+    hashedpinlist = []
+    for i in range(len_cards):
+        with open('cards/card_{}.bin'.format(0), 'rb') as f3:
+            card0 = pickle.load(f3)
+            f3.close()
+        accountlist.append(card0.account.accountnum)
+        hashedpinlist.append(card0.get_hashed_pin())
+    while True:
+        new_account_num = get_account_num()
+        if new_account_num not in accountlist:
+            break
+    while True:
+        new_pin = get_pin_num()
+        new_hashed_pin = hashlib.sha256(str(new_pin).encode()).hexdigest()
+        if new_hashed_pin not in hashedpinlist:
+            break
+
+    account = Account(new_account_num, password, money = money)
+    card = Card()
+    card.set_pin(new_pin)
+    #account.card = card
+    card.account = account
+
     with open('cards/num_card.txt', 'w') as f2:
         f2.write(str(len_cards + 1))
+        f2.close()
     with open('cards/card_{}.bin'.format(len_cards), 'wb') as f3:
         pickle.dump(card, f3)
+        f3.close()
 
 def verify_account(account):
     accountnum = account.accountnum
@@ -151,9 +177,5 @@ def verify_account(account):
         return False
 
 if __name__ == '__main__':
-    with open('cards/card_{}.bin'.format(0), 'rb') as f3:
-        car = pickle.load(f3)
-    print(car.account.accountnum)
-    print(verify_account(car.account))
-    print(car.pin_check())
-    #make_account_with_card(1234, 1000)
+    make_account_with_card(1234, 100000)
+    make_account_with_card(1234, 200000)
